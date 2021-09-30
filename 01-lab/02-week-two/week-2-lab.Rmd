@@ -1,6 +1,6 @@
 ---
 title: "EDS 222: Week 2: In-class Lab"
-author: "{Student name}"
+author: "Halina Do-Linh"
 date: "`r Sys.Date()`"
 output:
   tufte::tufte_html: default
@@ -12,14 +12,15 @@ output:
     latex_engine: xelatex
 ---
 
-
 # Section 0: Getting set up
 
 In Thursday lab, we will often be working with exercises based on Introduction to Modern Statistics (Çetinkaya-Rundel and Hardin, 2021). To be able to access the data and custom packages these exercises sometimes rely on, we need to do a bit of setup. This will get you all set for all future labs; you won't need to do it each time.
 
-1. Create a _Labs/_ folder where you will store all your lab materials for EDS 222. 
-2. Download `_common.R` and put it in the _Labs/_ folder.
-3. Install the following packages, if they are not already installed:^[Note: This will take a minute or two!]
+1.  Create a *Labs/* folder where you will store all your lab materials for EDS 222.
+2.  Download `_common.R` and put it in the *Labs/* folder.
+3.  Install the following packages, if they are not already installed:[^1]
+
+[^1]: Note: This will take a minute or two!
 
 ```{r setup, include=TRUE, echo=TRUE, eval=FALSE}
 suppressMessages({
@@ -52,7 +53,9 @@ suppressMessages({
 })
 ```
 
-4. Load all the packages you need, plus the `_common.R` source file.^[Note: If you get a `namespace load` error for `tidyverse`, you want to remove the problem package, reinstall it, and then load `tidyverse` again.]
+4.  Load all the packages you need, plus the `_common.R` source file.[^2]
+
+[^2]: Note: If you get a `namespace load` error for `tidyverse`, you want to remove the problem package, reinstall it, and then load `tidyverse` again.
 
 ```{r, include=TRUE}
 
@@ -61,12 +64,17 @@ library(tidyverse)
 library(readr)
 library(gt)
 library(openintro)
+library(here)
 
 # Where is the root directory where all your labs live? If you want to set up as an .RProj, go for it. 
-rootdir <- ("~/Dropbox/Teaching/UCSB/EDS_222/EDS222_data/")
+
+# rootdir <- ("~/Dropbox/Teaching/UCSB/EDS_222/EDS222_data/") this is commented out because I have an .RProj set up
 
 # This runs the script _common.R, which loads all the packages we'll need for today and does some extra stuff we won't really use, at least for now.
-source(file.path(rootdir,"labs","_common.R"))
+
+#source(file.path(rootdir,"labs","_common.R"))  this is an alternative way to tell R where the _common.R script is
+
+source(here::here("01-lab", "_common.R")) # I am using here to tell R where I keep _common.R 
 
 # For labs, we want to see all our code
 knitr::opts_chunk$set(echo = TRUE)
@@ -74,7 +82,9 @@ knitr::opts_chunk$set(echo = TRUE)
 
 # Section 1: Summarize and describe **categorical** variables
 
-We spent most of class on Tuesday discussing how to summarize _numerical_ variables. In contrast, _categorical_ variables can only take on one of a fixed number of values, so it doesn't make sense to do things like take averages (e.g., What is the "average" state in the US? What is the "average" tree species? These are not sensible questions!). Here, we will learn some helpful ways to summarize and display categorical variables.^[Note: this section follows [IMS Chapter 4](https://openintro-ims.netlify.app/explore-categorical.html) very closely! Lots more fun examples in their text if you want more practice.] 
+We spent most of class on Tuesday discussing how to summarize *numerical* variables. In contrast, *categorical* variables can only take on one of a fixed number of values, so it doesn't make sense to do things like take averages (e.g., What is the "average" state in the US? What is the "average" tree species? These are not sensible questions!). Here, we will learn some helpful ways to summarize and display categorical variables.[^3]
+
+[^3]: Note: this section follows [IMS Chapter 4](https://openintro-ims.netlify.app/explore-categorical.html) very closely! Lots more fun examples in their text if you want more practice.
 
 First, let's take a look at some data with categorical variables in it. Load the `loans_full_schema` data provided in the `openintro` package. Description from IMS:
 
@@ -82,32 +92,66 @@ First, let's take a look at some data with categorical variables in it. Load the
 
 We will focus on two variables:
 
-- `homeownership`, which indicates whether the loan applicant owns, has a mortgage on, or rents their home.
+-   `homeownership`, which indicates whether the loan applicant owns, has a mortgage on, or rents their home.
 
-- `application_type`, which indicates whether the applicant is applying as an individual, or joint with a partner. 
+-   `application_type`, which indicates whether the applicant is applying as an individual, or joint with a partner.
 
 ## Take a look at your data
 
 Let's investigate these variable types as stored in `R`. Do they make sense to you? What about the variable `interest_rate`?
 
 ```{r}
+class(loans_full_schema$homeownership)
 
+class(loans_full_schema$application_type)
+
+class(loans_full_schema$interest_rate)
 ```
 
-Create a dataframe called `loans` that cleans up the full dataset `loans_full_schema` to a) make the `homeownership` variable lower case (all caps is intense...), and b) reorder the "levels" of each variable into a sensible order.^[Note: reordering levels with `fct_relevel()` is helpful if your variable has a natural ordering to it, as all visuals will follow the order of the factor levels.] 
+Create a dataframe called `loans` that cleans up the full dataset `loans_full_schema` to a) make the `homeownership` variable lower case (all caps is intense...), and b) reorder the "levels" of each variable into a sensible order.[^4]
+
+[^4]: Note: reordering levels with `fct_relevel()` is helpful if your variable has a natural ordering to it, as all visuals will follow the order of the factor levels.
 
 ```{r}
+loans_clean <- loans_full_schema %>% 
+  mutate(
+    homeownership = tolower(homeownership),
+    homeownership = fct_relevel(homeownership, "rent", "mortgage", "own"), # use levels() to view order
+    application_type = fct_relevel(application_type, "joint", "individual")
+  )
 
+# side note: use str(data.frame) to see all class types and more. This shows you the structure of the data frame.
 ```
 
 ## Bar plots
 
-A bar plot is a common way to display a single categorical variable. The left panel below shows a bar plot for the homeownership variable. In the right panel, the counts are converted into proportions, showing the proportion of observations that are in each level.^[Note: The following chunk of code calls a matrix called `IMSCOL` which contains a bunch of color hex codes for colors used frequently in the IMS book. Type `IMSCOL` in your console to see all the colors you can pick from.]
+A bar plot is a common way to display a single categorical variable. The left panel below shows a bar plot for the homeownership variable. In the right panel, the counts are converted into proportions, showing the proportion of observations that are in each level.[^5]
 
-> Question: When might you prefer the left version of the bar plot? When might you prefer the right? 
+[^5]: Note: The following chunk of code calls a matrix called `IMSCOL` which contains a bunch of color hex codes for colors used frequently in the IMS book. Type `IMSCOL` in your console to see all the colors you can pick from.
+
+> Question: When might you prefer the left version of the bar plot? When might you prefer the right?
 
 ```{r loan-homeownership-bar-plot, fig.cap = "Two bar plots: the left panel shows the counts and the right panel shows the proportions of values of the homeownership variable.", fig.asp=0.5, fig.fullwidth=TRUE}
+# bar plots are histograms for categorical data
 
+# bar plot showing number of homeownership types
+p_count <- ggplot(loans_clean, aes(x = homeownership)) +
+  geom_bar(fill = IMSCOL["green", "full"]) + # type IMSCOL into the console to see all available colors
+  labs(x = "Homeownership", y = "Count")
+
+p_count
+
+# bar polot showing proportion of loans in each homeownership type
+p_proportion <- loans_clean %>% 
+  count(homeownership) %>% # count provides n
+  mutate(proportion = n / sum(n)) %>% # created new column proportion to find proportion
+  ggplot(aes(x = homeownership, y = proportion)) +
+  geom_col(fill = IMSCOL["pink", "f1"]) +
+  labs(x = "Homeownership", y = "Proportion")
+
+p_proportion
+
+p_count + p_proportion # use patchwork when you want to do more customization with multiple plots 
 ```
 
 ## Contingency tables
@@ -116,15 +160,33 @@ We often care about how two categorical variables interact with one another. For
 
 Each value in the table represents the number of times a particular combination of variable outcomes occurred.
 
-For example, the value 3496 corresponds to the number of loans in the dataset where the borrower rents their home and the application type was by an individual. Row and column totals are also included. The row totals provide the total counts across each row and the column totals down each column. 
+For example, the value 3496 corresponds to the number of loans in the dataset where the borrower rents their home and the application type was by an individual. Row and column totals are also included. The row totals provide the total counts across each row and the column totals down each column.
 
 ```{r loan-home-app-type-totals}
+
+# feel free to go back and add IMSCOL colors, labs, and theme later
+p_stacked <- ggplot(loans_clean, aes(x = homeownership, fill = application_type)) +
+  geom_bar() +
+  scale_fill_manual(values = c(IMSCOL["blue", "full"], IMSCOL["yellow", "full"])) +
+  labs( x = "Homeownership", y = "Count")
+
+p_stacked
+
+p_dodged <- ggplot(loans_clean, aes(x = homeownership, fill = application_type)) +
+  geom_bar(position = "dodge")
+
+p_dodged
+
+p_standarized <- ggplot(loans_clean, aes(x = homeownership, fill = application_type)) +
+  geom_bar(position = "fill")
+
+p_standarized
 
 ```
 
 ### [Optional, bonus exercise]
 
-Often, we are more interested in the _proportion_ of our sample that falls into each category, as opposed to the total count. Recreate the above table, but now replace in each cell the counts of observations with the proportion of each application type that comes from applicants that rent, own, or have a mortgage on their home.
+Often, we are more interested in the *proportion* of our sample that falls into each category, as opposed to the total count. Recreate the above table, but now replace in each cell the counts of observations with the proportion of each application type that comes from applicants that rent, own, or have a mortgage on their home.
 
 Answer:
 
@@ -138,25 +200,25 @@ We can display the distributions of two categorical variables on a bar plot at t
 
 For example, here we create three bar plots that visualize the relationship between `homeownership` and `application_type` variables.
 
-- First, we make a **stacked bar plot**, which simply stacks the count of observations in each `homeownership` type, coloring by `application_type`. We can see that most of the loan applicants live in mortgaged homes, but it's hard to say if a joint versus individual applicant is more or less likely to rent, own, or have a mortgage. 
+-   First, we make a **stacked bar plot**, which simply stacks the count of observations in each `homeownership` type, coloring by `application_type`. We can see that most of the loan applicants live in mortgaged homes, but it's hard to say if a joint versus individual applicant is more or less likely to rent, own, or have a mortgage.
 
 ```{r stacked, fig.margin=TRUE, fig.asp = 0.8, out.width="100%"}
 
 ```
 
-### Exercise (work solo or with neighbors): 
+### Exercise (work solo or with neighbors):
 
 Refer to the documentation for `geom_bar()` to make two different versions of the stacked bar plot, each of which communicates these two categorical variables differently.
 
-1. Make a **dodged bar plot**, which has two bars for each homeownership category, one next to each other (or, "dodged"). One bar is the count of applicants in that homeownership category that are individual applicants, and the other that are joint applicants.
+1.  Make a **dodged bar plot**, which has two bars for each homeownership category, one next to each other (or, "dodged"). One bar is the count of applicants in that homeownership category that are individual applicants, and the other that are joint applicants.
 
-2. Make a **standardized bar plot** (also known as **filled bar plot**), which shows two bars stacked on top of each other, each indicating the proportion of loan applicants in each homeownership category that are joint (one color) versus individual (a second color). 
+2.  Make a **standardized bar plot** (also known as **filled bar plot**), which shows two bars stacked on top of each other, each indicating the proportion of loan applicants in each homeownership category that are joint (one color) versus individual (a second color).
 
 > What do you notice about each bar plot type? When might one version be helpful and another not?
 
 ### Answers:
 
-- Here's a  **dodged bar plot**, which puts the "stacks" by applicant type next to each other. It's often easier to see the total quantity in each category this way.
+-   Here's a **dodged bar plot**, which puts the "stacks" by applicant type next to each other. It's often easier to see the total quantity in each category this way.
 
 ```{r dodged, fig.margin=TRUE, fig.asp = 0.8, out.width="100%"}
 p_dodged <- ggplot(loans, aes(x = homeownership, fill = application_type)) +
@@ -170,7 +232,7 @@ p_dodged <- ggplot(loans, aes(x = homeownership, fill = application_type)) +
 p_dodged
 ```
 
-- Here is a **standardized bar plot**. It's easiest to see the relationships _between_ the two categories here, but you can't learn about the total number of applications. 
+-   Here is a **standardized bar plot**. It's easiest to see the relationships *between* the two categories here, but you can't learn about the total number of applications.
 
 ```{r standardized, fig.margin=TRUE, fig.asp = 0.8, out.width="100%"}
 p_standardized <- ggplot(loans, aes(x = homeownership, fill = application_type)) +
@@ -188,11 +250,13 @@ p_standardized
 
 ## Histograms
 
-As we discussed in class, we can make a histogram from our _sample_ to learn about what the probability density function of our _population_ is likely to look like. For example, you might want to know if your variable follows a normal distribution or not.
+As we discussed in class, we can make a histogram from our *sample* to learn about what the probability density function of our *population* is likely to look like. For example, you might want to know if your variable follows a normal distribution or not.
 
-A histogram plots the count (or proportion) of your data that fall into a set of user-specified bins.^[Note: Even if you're working with continuous data, any histogram function in `R` will bin up your continuous data into discrete bins, and then plot the proportion of your data in that bin.]
+A histogram plots the count (or proportion) of your data that fall into a set of user-specified bins.[^6]
 
-We'll use `ggplot` and the `geom_histogram` function to make a histogram of the interest rate associated with all the loans in our loan database.  
+[^6]: Note: Even if you're working with continuous data, any histogram function in `R` will bin up your continuous data into discrete bins, and then plot the proportion of your data in that bin.
+
+We'll use `ggplot` and the `geom_histogram` function to make a histogram of the interest rate associated with all the loans in our loan database.
 
 ```{r hist1}
 
@@ -200,7 +264,9 @@ We'll use `ggplot` and the `geom_histogram` function to make a histogram of the 
 
 ### Exercise
 
-The above plot showed us _counts_ in each bin, where the bins were left unspecified.^[`R` will remind you to change bin values if you leave them unspecified, since the default is rarely appropriate for your data.] The command `breaks = seq(5, 27.5, 2.5)` creates a vector called `breaks` that goes from 5 to 25 in intervals of 2.5. Generate this vector and use it within `geom_histogram()` to create new bin widths in your histogram. 
+The above plot showed us *counts* in each bin, where the bins were left unspecified.[^7] The command `breaks = seq(5, 27.5, 2.5)` creates a vector called `breaks` that goes from 5 to 25 in intervals of 2.5. Generate this vector and use it within `geom_histogram()` to create new bin widths in your histogram.
+
+[^7]: `R` will remind you to change bin values if you leave them unspecified, since the default is rarely appropriate for your data.
 
 This new histogram describes our data more clearly. What do you see? Use terms from class (e.g., symmetric, skew, tails, etc.) to describe the distribution of the interest rate in this sample of loans. Is the interest rate approximately normally distributed?
 
@@ -210,7 +276,9 @@ This new histogram describes our data more clearly. What do you see? Use terms f
 
 ### [Optional exercise]
 
-Often, we care about _proportions_ instead of counts, as described above for categorical data. Remake the last histogram (with custom break points), but now show the proportion of the data that fall into each bin instead of the total number of observations.^[Hint: Since proportions indicates probability densities, you will want to look in function documentation for "density" in a histogram.]
+Often, we care about *proportions* instead of counts, as described above for categorical data. Remake the last histogram (with custom break points), but now show the proportion of the data that fall into each bin instead of the total number of observations.[^8]
+
+[^8]: Hint: Since proportions indicates probability densities, you will want to look in function documentation for "density" in a histogram.
 
 ```{r hist3}
 
@@ -220,7 +288,9 @@ Often, we care about _proportions_ instead of counts, as described above for cat
 
 Box plots are a standard way for us to visualize quantiles of a variable. Recall, quantiles tell us how much of our data sit below a certain value (e.g., the first tercile or first 3-quantile tells us the value at which 1/3 of the data sit below.).
 
-In their most standard form, box plots show a _box_ where the outer edges of the box indicate the 1st and 3rd quartiles of the data (i.e., 25th and 75th percentiles).^[Note: The range from the 25th to 75th percentile is called the "inter-quartile range" or IQR -- you'll see that lingo a lot!] A vertical line is shown through the box indicating the 2nd quartile (i.e., 50th percentile or median). Lines outside the box are called "whiskers" and indicate the median minus (or plus) 1.5 times the IQR. While this is the most standard boxplot, you can customize these cutoffs to any quantiles you'd like.
+In their most standard form, box plots show a *box* where the outer edges of the box indicate the 1st and 3rd quartiles of the data (i.e., 25th and 75th percentiles).[^9] A vertical line is shown through the box indicating the 2nd quartile (i.e., 50th percentile or median). Lines outside the box are called "whiskers" and indicate the median minus (or plus) 1.5 times the IQR. While this is the most standard boxplot, you can customize these cutoffs to any quantiles you'd like.
+
+[^9]: Note: The range from the 25th to 75th percentile is called the "inter-quartile range" or IQR -- you'll see that lingo a lot!
 
 Here, we repeat the histogram above, showing the distribution of the `interest_rate` variable in the data. We then make a boxplot using the standard quantiles. Note that outliers beyond the median + 1.5$\times$IQR are shown as individual points.
 
@@ -234,20 +304,20 @@ What do you notice in the boxplot? Do you prefer communicating skew, tails, and 
 
 The Law of Large Numbers tells us that as a randomly drawn sample increases in size, the sample average $\bar x$ converges towards the true population mean $\mu$. Here, we are going to show that this is true through running a "simulation" in `R`. That is, we will specify the true population mean, generate some fake data that are randomly drawn, and see how $\bar x$ compares to $\mu$ for different population sizes. We are hoping that as our sample size $n$ grows, our sample mean gets closer and closer to the true $\mu$.
 
-To do this follow the following steps: 
+To do this follow the following steps:
 
-1. For each $n$ from 1 to 1,000, randomly draw a sample size of $n$ from the standard normal distribution, which we know has $\mu=0$ and $\sigma=1$.^[Hint: `rnorm(x)` is a function that randomly draws $x$ numbers from the normal distribution.]
+1.  For each $n$ from 1 to 1,000, randomly draw a sample size of $n$ from the standard normal distribution, which we know has $\mu=0$ and $\sigma=1$.[^10]
 
-2. For each of your 1,000 samples, compute the sample mean $\bar x_n$.
+2.  For each of your 1,000 samples, compute the sample mean $\bar x_n$.
 
-```{r}
-
-```
-
-3. Plot on a graph the sample mean ($y$-axis) against the sample size ($x$-axis). Use `graphically that the mean of the samples will approach the expected value of the mean and standard deviation of the population.
+[^10]: Hint: `rnorm(x)` is a function that randomly draws $x$ numbers from the normal distribution.
 
 ```{r}
 
 ```
 
+3.  Plot on a graph the sample mean ($y$-axis) against the sample size ($x$-axis). Use \`graphically that the mean of the samples will approach the expected value of the mean and standard deviation of the population.
 
+```{r}
+
+```
